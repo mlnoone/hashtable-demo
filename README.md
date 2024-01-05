@@ -1,8 +1,8 @@
 ## hashtable-demo
 
 _An interactive hash table demo in c_
-
-Ah.. the amazing hash table, the backbone of much of modern software. Associative arrays, dictionaries, most PHP data structures, are all hash tables behind the scene.
+![Screenshot](https://sasyabook.com/images/htblss.png)
+Ah... the amazing hash table, the backbone of much of modern software. Associative arrays, dictionaries, most PHP data structures, are all hash tables behind the scene.
 
 Hash tables combine flexible storage with quick addressing, and handle all of C-R-U-D efficiently and elegantly.
 
@@ -13,3 +13,5 @@ You can  try it out quickly by pasting the code inside 'hashtable.c' at the Onli
 or it can be compiled and run on Linux, Mac or Windows: `gcc -o hashtable hashtable.c` [with ` -lm` in linux]
 
 The code is commented to highlight some important paradigms of hash table design.
+
+Collisions are handled by open adressing / linear probing.
