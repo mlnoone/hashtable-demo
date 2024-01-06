@@ -12,6 +12,6 @@ You can  try it out quickly by pasting the code inside 'hashtable.c' at the Onli
 
 or it can be compiled and run on Linux, Mac or Windows: `gcc -o hashtable hashtable.c` [with ` -lm` in linux]
 
-The code is commented to highlight some important paradigms of hash table design.
+The code is commented to highlight some important paradigms of hash tables.
 
-Collisions are handled by open adressing / linear probing.
+Note: Collisions are handled by open adressing / linear probing.
