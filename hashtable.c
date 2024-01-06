@@ -244,6 +244,11 @@ int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, int** hashesp
        //use strdup to get copies, these are allocated on the heap and need to be freed.
        keys[nElem] = strdup(key);
        values[nElem] = strdup(value);
+       if (keys[nElem] == NULL || values[nElem] == NULL) {
+           fprintf(stderr, "Memory alloc failed(2)\n");
+           return 1;
+        }
+       
        int incStatus = incEl(keysptr,valuesptr,storedptr,hashesptr);
        if (incStatus){
            if (incStatus == RESIZED) { //Reassign to new address otherwise will get SEGFAULT
@@ -253,10 +258,7 @@ int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, int** hashesp
        } else {
            return 1;
        }
-       if (keys[nElem] == NULL || values[nElem] == NULL) {
-           fprintf(stderr, "Memory alloc failed(2)\n");
-           return 1;
-        }
+       
        
       
        
@@ -310,6 +312,7 @@ void rehash(HashTable* hashtableptr, char** keys, char** values, int* hashes, bo
         for (int i=start;i<nElem; i++) {
             stored[i] = false;
             hashes[i] = hash(keys[i]);
+            printf("Stored #[%s] = %d to hashes\n", keys[i], hashes[i]);
         }
     }
     
@@ -408,41 +411,41 @@ void update(HashTable hashtable, char** keys, char** values, char* key, char* va
 }
 
 void delete(HashTable hashtable, char* key, char** keys, char** values, int* hashes) {
-    int next =  hash(key);
-    printf("\n%d", next);
-    int prev = -1;
-    while( next != -1) {
-        printf("->%s", ( hashtable[next].key == NULL ? "ⓧ" : hashtable[next].key ) );
-        if ( hashtable[next].key == NULL ) break;
-        if (!strcmp(key, hashtable[next].key)) {
+    int currentIndex =  hash(key);
+    printf("\n%d", currentIndex);
+    int prevIndex = -1;
+    while( currentIndex != -1) {
+        printf("->%s", ( hashtable[currentIndex].key == NULL ? "ⓧ" : hashtable[currentIndex].key ) );
+        if ( hashtable[currentIndex].key == NULL ) break;
+        if (!strcmp(key, hashtable[currentIndex].key)) {
             printf("\nDeleting key '%s'\n", key);
-            if (prev!= -1) {
-                hashtable[prev].next = hashtable[next].next;
+            int i = hashtable[currentIndex].keyIndex;
+            if (prevIndex!= -1) {
+                hashtable[prevIndex].next = hashtable[currentIndex].next;
             } else {
-                int nnext = hashtable[next].next;
-                if (nnext != -1) {
+                int nextIndex = hashtable[currentIndex].next;
+                if (nextIndex != -1) {
                     
                     // Don't chain through non matching hashes which may happen
                     // after multiple deletions and additions
                     
-                    while(hashes[hashtable[next].keyIndex] != hashes[hashtable[nnext].keyIndex]) {
-                        next = nnext;
-                        if (nnext == -1) break;
-                        nnext = hashtable[nnext].next;
+                    while(hashes[hashtable[nextIndex].keyIndex] != hashes[hashtable[currentIndex].keyIndex] ) {
+                        nextIndex = hashtable[nextIndex].next;
+                        if (nextIndex == -1) break;
                     }
-                    
-                    hashtable[next].key = hashtable[nnext].key;
-                    hashtable[next].keyIndex = hashtable[nnext].keyIndex;
-                    hashtable[next].value = hashtable[nnext].value;
-                    hashtable[next].next = hashtable[nnext].next;
-                    next = nnext;
+                    if (nextIndex != -1) {
+                        hashtable[currentIndex].key = hashtable[nextIndex].key;
+                        hashtable[currentIndex].keyIndex = hashtable[nextIndex].keyIndex;
+                        hashtable[currentIndex].value = hashtable[nextIndex].value;
+                        hashtable[currentIndex].next = hashtable[nextIndex].next;
+                        currentIndex = nextIndex;
+                    }
                 }
             }
-            int i = hashtable[next].keyIndex;
-            hashtable[next].key = NULL;
-            hashtable[next].value = NULL;
-            hashtable[next].next = -1;
-            hashtable[next].keyIndex = -1;
+            hashtable[currentIndex].keyIndex = -1;
+            hashtable[currentIndex].key = NULL;
+            hashtable[currentIndex].value = NULL;
+            hashtable[currentIndex].next = -1;
             if (i!=-1) {
                 free(keys[i]);
                 free(values[i]);
@@ -455,8 +458,8 @@ void delete(HashTable hashtable, char* key, char** keys, char** values, int* has
             return;
         }
         
-        prev = next;
-        next = hashtable[next].next; 
+        prevIndex = currentIndex;
+        currentIndex = hashtable[currentIndex].next;
     }
      printf("\nKey: '%s' not found\n", key);
 }
