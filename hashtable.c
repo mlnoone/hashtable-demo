@@ -173,7 +173,7 @@ int main() {
                       return 1;
                    }
                    
-                   if (!incEl(&keys,&values,&stored)) {
+                   if (incEl(&keys,&values,&stored) == FAILED) {
                        return 1;
                    }
                    
@@ -269,7 +269,7 @@ int incEl(char*** keysptr, char*** valuesptr, bool** storedptr) {
     //resize arrays if needed
     if (nElem>size) {
         size = nElem+5;
-        printf("\nResizing backing arrays to %d\n", size);
+        printf("<Resizing backing arrays to %d>\n\n", size);
         *keysptr = realloc(*keysptr, oneString * size);
         *valuesptr = realloc(*valuesptr, oneString * size);
         *storedptr = realloc(*storedptr, sizeof(bool) * size);
@@ -302,14 +302,14 @@ void rehash(Entry** hashtableptr, char** keys, char** values, bool** storedptr, 
    bool collisions = false;
    for (int i=start;i<nElem; i++) {
        if (keys[i] == NULL) continue;
-	    int shash = hash(keys[i]);
-	    printf("#[%s] = %d\n", keys[i],shash);
-	    if (hashtable[shash].key == NULL ) { 
-	    	hashtable[shash].key = keys[i];
-	    	hashtable[shash].value = values[i];
-	    	hashtable[shash].next = -1;
+	    int khash = hash(keys[i]);
+	    printf("#[%s] = %d\n", keys[i],khash);
+	    if (hashtable[khash].key == NULL ) {
+	    	hashtable[khash].key = keys[i];
+	    	hashtable[khash].value = values[i];
+	    	hashtable[khash].next = -1;
 	    	stored[i] = true;
-	    	printf("Stored %s=>%s at %d\n", keys[i], values[i], shash);
+	    	printf("Stored %s=>%s at %d\n", keys[i], values[i], khash);
 	    } else {
 	       collisions = true;
 	       printf ("Hash collision!\n")  ;
@@ -404,6 +404,15 @@ void delete(Entry* hashtable, char* key, char** keys, char** values) {
             } else {
                 int nnext = hashtable[next].next;
                 if (nnext != -1) {
+                    
+                    // Don't chain through non matching hashes which may happen
+                    // after multiple deletions and additions
+                    while(hash(hashtable[next].key) != hash(hashtable[nnext].key)) {
+                        next = nnext;
+                        if (nnext == -1) break;
+                        nnext = hashtable[nnext].next;
+                    }
+                    
                     hashtable[next].key = hashtable[nnext].key;
                     hashtable[next].value = hashtable[nnext].value;
                     hashtable[next].next = hashtable[nnext].next;
@@ -509,3 +518,5 @@ int hash(char* str) {
 
         return (int) (hash%tableSize);
 }
+
+
