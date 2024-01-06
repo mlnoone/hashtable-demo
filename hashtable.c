@@ -11,12 +11,12 @@
 
 #define MAX_LENGTH 255 // Max input length
 
-
 /* Represents a single key=>value entry in the hashtable
  * next: index of the next entry in the collision chain, if any.
  * If none, next is set to -1*/
 typedef struct entry{
   char* key;
+  int keyIndex;
   char* value;
   int   next;
 } Entry;
@@ -25,19 +25,18 @@ typedef struct entry{
 int hash(char* str);
 
 void readString(char*);
-int getInput(char*** , char*** , bool**, char*);
+int getInput(char*** , char*** , bool**, int**, char*);
 /*Increase elements and resize backing arrays if needed*/
-int incEl(char*** , char***, bool** );
-void rehash(Entry** , char** , char** , bool**, int);
+int incEl(char*** , char***, bool**,int**);
+void rehash(Entry** , char** , char** , int*, bool**, int);
 
-void printHashTable(Entry*);
+void printHashTable(Entry*, int*);
 
 //CRUD operations
 bool checkKey(Entry*, char*);
 char* getValue(char* key, Entry* hashTable);
 void update(Entry*, char**, char**, char*, char*);
-void delete(Entry*, char*, char** , char** );
-int indexOf(char* , char** , int );
+void delete(Entry*, char*, char** , char**, int*);
 
 /*string format length calculation utility*/
 int fl(const char*, ...);
@@ -73,27 +72,29 @@ int main() {
    //Backing arrays
    char** keys = malloc(oneString * size);
    char** values = malloc(oneString * size);
+   int* hashes = malloc(sizeof(int) * size);
     
    //Array of flags indicating stored status of backing array entries
    bool* stored = malloc(sizeof(bool) * size);
+    
     
    if (keys == NULL || values == NULL) {
         fprintf(stderr, "Memory alloc failed\n");
         return 1;
     }
 
-   if (getInput(&keys, &values, &stored, stringBuffer)) {
+   if (getInput(&keys, &values, &stored, &hashes, stringBuffer)) {
        return 1;
     }
-
+    
    //Set tableSize, ensuring load factor of <75%
    tableSize = nextPrime((nElem*4)/3);
   
    Entry* hashtable = malloc(tableSize * sizeof(Entry));
    
-   rehash(&hashtable, keys, values, &stored, 0);
+   rehash(&hashtable, keys, values, hashes, &stored, 0);
 
-   printHashTable(hashtable);
+   printHashTable(hashtable, hashes);
    
    char stringBuffer2[MAX_LENGTH]; // for receiving value updates
    
@@ -116,7 +117,7 @@ int main() {
                     }
                 if (strcmp("/",stringBuffer2)) {
                 update(hashtable, keys, values, stringBuffer, strdup(stringBuffer2));
-                printHashTable(hashtable);
+                printHashTable(hashtable, hashes);
                 }
             } else {
                   printf("\nNo value found for key '%s'\n", stringBuffer);
@@ -130,8 +131,8 @@ int main() {
            break;
         }
         if (strcmp("/",stringBuffer)) {
-           delete(hashtable, stringBuffer, keys, values);
-           printHashTable(hashtable);
+           delete(hashtable, stringBuffer, keys, values, hashes);
+           printHashTable(hashtable, hashes);
        }
        
        printf("\nEnter key,value to ADD, '/' to skip,  '.' to quit: \n");
@@ -173,7 +174,7 @@ int main() {
                       return 1;
                    }
                    
-                   if (incEl(&keys,&values,&stored) == FAILED) {
+                   if (incEl(&keys,&values,&stored,&hashes) == FAILED) {
                        return 1;
                    }
                    
@@ -187,10 +188,10 @@ int main() {
                        hashtable = realloc(hashtable, tableSize * sizeof(Entry));
                    }
                    
-                   rehash(&hashtable, keys, values, &stored, start);
+                   rehash(&hashtable, keys, values, hashes, &stored, start);
                }
       
-               printHashTable(hashtable);
+               printHashTable(hashtable, hashes);
            }
        }
     }
@@ -200,14 +201,14 @@ int main() {
     for (int i=0; i<nElem; i++) {
         free(keys[i]); free(values[i]);
     }
-    free(keys);free(values);free(stored);free(hashtable);
+    free(keys);free(values);free(stored);free(hashes);free(hashtable);
 }
 
-int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, char* stringBuffer) {
+int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, int** hashesptr, char* stringBuffer) {
 
    char** keys = *keysptr;
    char** values = *valuesptr;
-   
+    
    while(true) {
        
        readString(stringBuffer);
@@ -224,7 +225,7 @@ int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, char* stringB
        char* key = stringBuffer;
        char* value = &comma[1];
        
-       
+      
        if (key == NULL || value == NULL) {
            fprintf(stderr, "Invalid input\n");
            return 1;
@@ -236,15 +237,12 @@ int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, char* stringB
                goto continueOuter;
             }   
         }
+       
+       
        //use strdup to get copies, these are allocated on the heap and need to be freed.
        keys[nElem] = strdup(key);
        values[nElem] = strdup(value);
-       if (keys[nElem] == NULL || values[nElem] == NULL) {
-           fprintf(stderr, "Memory alloc failed(2)\n");
-           return 1;
-        }
-       
-       int incStatus = incEl(keysptr,valuesptr,storedptr);
+       int incStatus = incEl(keysptr,valuesptr,storedptr,hashesptr);
        if (incStatus){
            if (incStatus == RESIZED) { //Reassign to new address otherwise will get SEGFAULT
                keys = *keysptr;
@@ -253,6 +251,12 @@ int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, char* stringB
        } else {
            return 1;
        }
+       if (keys[nElem] == NULL || values[nElem] == NULL) {
+           fprintf(stderr, "Memory alloc failed(2)\n");
+           return 1;
+        }
+       
+      
        
        continueOuter:;
        
@@ -262,18 +266,19 @@ int getInput(char*** keysptr, char*** valuesptr, bool **storedptr, char* stringB
    return 0;
 }
 
-int incEl(char*** keysptr, char*** valuesptr, bool** storedptr) {
+int incEl(char*** keysptr, char*** valuesptr, bool** storedptr, int** hashesptr) {
     nElem++;
     storedElem++;
     
     //resize arrays if needed
-    if (nElem>size) {
+    if (nElem>=size) {
         size = nElem+5;
         printf("<Resizing backing arrays to %d>\n\n", size);
         *keysptr = realloc(*keysptr, oneString * size);
         *valuesptr = realloc(*valuesptr, oneString * size);
         *storedptr = realloc(*storedptr, sizeof(bool) * size);
-        if (*keysptr == NULL || *valuesptr == NULL || *storedptr == NULL) {
+        *hashesptr = realloc(*hashesptr, sizeof(int) * size);
+        if (*keysptr == NULL || *valuesptr == NULL || *storedptr == NULL || *hashesptr == NULL) {
             fprintf(stderr, "Memory alloc failed(3)\n");
             return FAILED;
          }
@@ -282,7 +287,7 @@ int incEl(char*** keysptr, char*** valuesptr, bool** storedptr) {
     return SUCCESS;
 }
   
-void rehash(Entry** hashtableptr, char** keys, char** values, bool** storedptr, int start) {
+void rehash(Entry** hashtableptr, char** keys, char** values, int* hashes, bool** storedptr, int start) {
 
     printf("\nBuilding Hash Table:\n");
     Entry* hashtable = *hashtableptr;
@@ -294,7 +299,15 @@ void rehash(Entry** hashtableptr, char** keys, char** values, bool** storedptr, 
             hashtable[i].key = NULL;
             hashtable[i].value = NULL;
             hashtable[i].next = -1;
-            if (i<nElem) stored[i] = false;
+            if (i<nElem) {
+                stored[i] = false;
+                hashes[i] = hash(keys[i]);
+            }
+        }
+    } else {
+        for (int i=start;i<nElem; i++) {
+            stored[i] = false;
+            hashes[i] = hash(keys[i]);
         }
     }
     
@@ -302,10 +315,11 @@ void rehash(Entry** hashtableptr, char** keys, char** values, bool** storedptr, 
    bool collisions = false;
    for (int i=start;i<nElem; i++) {
        if (keys[i] == NULL) continue;
-	    int khash = hash(keys[i]);
+	    int khash = hashes[i];
 	    printf("#[%s] = %d\n", keys[i],khash);
 	    if (hashtable[khash].key == NULL ) {
 	    	hashtable[khash].key = keys[i];
+            hashtable[khash].keyIndex = i;
 	    	hashtable[khash].value = values[i];
 	    	hashtable[khash].next = -1;
 	    	stored[i] = true;
@@ -324,9 +338,10 @@ void rehash(Entry** hashtableptr, char** keys, char** values, bool** storedptr, 
     	  	if (hashtable[j].key == NULL) {
     	  	    printf("Found empty slot: %d\n", j); 
     	  	  	hashtable[j].key = keys[i];
+                hashtable[j].keyIndex = i;
         		hashtable[j].value = values[i];
         		hashtable[j].next = -1;
-                int next =  hash(keys[i]);
+                int next =  hashes[i];
                 printf("%d->%s", next, hashtable[next].key );
         		while( hashtable[next].next != -1) { next = hashtable[next].next;  printf("->%s", hashtable[next].key ); }
         		
@@ -377,7 +392,7 @@ void update(Entry* hashtable, char** keys, char** values, char* key, char* value
         printf("->%s", ( hashtable[next].key == NULL ? "ⓧ" : hashtable[next].key ) );
         if ( hashtable[next].key == NULL ) break;
         if (!strcmp(key, hashtable[next].key)) {
-            int i = indexOf(key, keys, nElem);
+            int i = hashtable[next].keyIndex;
             free(values[i]);
             values[i] = value;
             hashtable[next].value = values[i];
@@ -390,7 +405,7 @@ void update(Entry* hashtable, char** keys, char** values, char* key, char* value
 
 }
 
-void delete(Entry* hashtable, char* key, char** keys, char** values) {
+void delete(Entry* hashtable, char* key, char** keys, char** values, int* hashes) {
     int next =  hash(key);
     printf("\n%d", next);
     int prev = -1;
@@ -407,27 +422,31 @@ void delete(Entry* hashtable, char* key, char** keys, char** values) {
                     
                     // Don't chain through non matching hashes which may happen
                     // after multiple deletions and additions
-                    while(hash(hashtable[next].key) != hash(hashtable[nnext].key)) {
+                    
+                    while(hashes[hashtable[next].keyIndex] != hashes[hashtable[nnext].keyIndex]) {
                         next = nnext;
                         if (nnext == -1) break;
                         nnext = hashtable[nnext].next;
                     }
                     
                     hashtable[next].key = hashtable[nnext].key;
+                    hashtable[next].keyIndex = hashtable[nnext].keyIndex;
                     hashtable[next].value = hashtable[nnext].value;
                     hashtable[next].next = hashtable[nnext].next;
                     next = nnext;
                 }
             }
+            int i = hashtable[next].keyIndex;
             hashtable[next].key = NULL;
             hashtable[next].value = NULL;
             hashtable[next].next = -1;
-            int i = indexOf(key, keys, nElem);
+            hashtable[next].keyIndex = -1;
             if (i!=-1) {
                 free(keys[i]);
                 free(values[i]);
                 keys[i] = NULL;
                 values[i]= NULL;
+                hashes[i] = -1;
             }
             
             storedElem--;
@@ -440,21 +459,13 @@ void delete(Entry* hashtable, char* key, char** keys, char** values) {
      printf("\nKey: '%s' not found\n", key);
 }
 
-int indexOf(char* str, char** array, int len) {
-    for (int i=0; i<len; i++) {
-        if (array[i] == NULL) continue;
-        if(!strcmp(str,array[i])) return i;
-    }
-    return -1;
-}
 
-
-void printHashTable(Entry* hashtable) {
+void printHashTable(Entry* hashtable, int* hashes) {
     printf("\nCurrent Table:\n");
     for (int i=0;i<tableSize;i++) {
 	   Entry entry = hashtable[i];
        if (entry.key!=NULL) {
-           bool root = (i == hash(entry.key));
+           bool root = (i == hashes[entry.keyIndex]);
            bool hasNext = entry.next != -1;
            const char* format = " ->%s[%d]";
            char next[hasNext ? fl(format,hashtable[entry.next].key, entry.next) : 1];
@@ -518,5 +529,3 @@ int hash(char* str) {
 
         return (int) (hash%tableSize);
 }
-
-
