@@ -21,6 +21,8 @@ typedef struct entry{
   int   next;
 } Entry;
 
+typedef Entry* HashTable;
+
 //djb2 hash
 int hash(char* str);
 
@@ -28,15 +30,15 @@ void readString(char*);
 int getInput(char*** , char*** , bool**, int**, char*);
 /*Increase elements and resize backing arrays if needed*/
 int incEl(char*** , char***, bool**,int**);
-void rehash(Entry** , char** , char** , int*, bool**, int);
+void rehash(HashTable* , char** , char** , int*, bool**, int);
 
-void printHashTable(Entry*, int*);
+void printHashTable(HashTable, int*);
 
 //CRUD operations
-bool checkKey(Entry*, char*);
-char* getValue(char* key, Entry* hashTable);
-void update(Entry*, char**, char**, char*, char*);
-void delete(Entry*, char*, char** , char**, int*);
+bool checkKey(HashTable, char*);
+char* getValue(char* key, HashTable hashTable);
+void update(HashTable, char**, char**, char*, char*);
+void delete(HashTable, char*, char** , char**, int*);
 
 /*string format length calculation utility*/
 int fl(const char*, ...);
@@ -90,7 +92,7 @@ int main() {
    //Set tableSize, ensuring load factor of <75%
    tableSize = nextPrime((nElem*4)/3);
   
-   Entry* hashtable = malloc(tableSize * sizeof(Entry));
+   HashTable hashtable = malloc(tableSize * sizeof(Entry));
    
    rehash(&hashtable, keys, values, hashes, &stored, 0);
 
@@ -287,10 +289,10 @@ int incEl(char*** keysptr, char*** valuesptr, bool** storedptr, int** hashesptr)
     return SUCCESS;
 }
   
-void rehash(Entry** hashtableptr, char** keys, char** values, int* hashes, bool** storedptr, int start) {
+void rehash(HashTable* hashtableptr, char** keys, char** values, int* hashes, bool** storedptr, int start) {
 
     printf("\nBuilding Hash Table:\n");
-    Entry* hashtable = *hashtableptr;
+    HashTable hashtable = *hashtableptr;
 
     bool* stored = *storedptr;
  
@@ -356,7 +358,7 @@ void rehash(Entry** hashtableptr, char** keys, char** values, int* hashes, bool*
     }
 }
 
-bool checkKey(Entry* hashtable, char* key) {
+bool checkKey(HashTable hashtable, char* key) {
     int next =  hash(key);
     while( next != -1) {
         if ( hashtable[next].key != NULL ) {
@@ -369,7 +371,7 @@ bool checkKey(Entry* hashtable, char* key) {
      return false;
 }
 
-char* getValue(char* key, Entry* hashtable) {
+char* getValue(char* key, HashTable hashtable) {
     int next =  hash(key);
     printf("\n#%d", next);
     while( next != -1) {
@@ -385,7 +387,7 @@ char* getValue(char* key, Entry* hashtable) {
     return NULL;
 }
 
-void update(Entry* hashtable, char** keys, char** values, char* key, char* value) {
+void update(HashTable hashtable, char** keys, char** values, char* key, char* value) {
     int next =  hash(key);
     printf("\n%d", next);
     while( next != -1) {
@@ -405,7 +407,7 @@ void update(Entry* hashtable, char** keys, char** values, char* key, char* value
 
 }
 
-void delete(Entry* hashtable, char* key, char** keys, char** values, int* hashes) {
+void delete(HashTable hashtable, char* key, char** keys, char** values, int* hashes) {
     int next =  hash(key);
     printf("\n%d", next);
     int prev = -1;
@@ -460,7 +462,7 @@ void delete(Entry* hashtable, char* key, char** keys, char** values, int* hashes
 }
 
 
-void printHashTable(Entry* hashtable, int* hashes) {
+void printHashTable(HashTable hashtable, int* hashes) {
     printf("\nCurrent Table:\n");
     for (int i=0;i<tableSize;i++) {
 	   Entry entry = hashtable[i];
