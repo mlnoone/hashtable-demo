@@ -168,14 +168,15 @@ bool rehash(HashTable* htp, char** newKeys, char** newValues, int newCount) {
               printf("'%s':\n",keys[i]);
               for (int j=0;j<tableSize; j++) {
               if (hashtable[j].key == NULL) {
-                  printf("Found empty slot: %d\n", j);
-                    hashtable[j].key = keys[i];
+                printf("Found empty slot: %d\n", j);
+                hashtable[j].key = keys[i];
                 hashtable[j].keyIndex = i;
                 hashtable[j].hash = hashes[i_s];
                 hashtable[j].value = values[i];
                 hashtable[j].next = -1;
                 int currentIndex =  hashes[i_s];
                 printf("%d->%s", currentIndex, hashtable[currentIndex].key );
+                // Go to the end of the chain, where next will be -1
                 while( hashtable[currentIndex].next != -1) { currentIndex = hashtable[currentIndex].next;  printf("->%s", hashtable[currentIndex].key ); }
                 // Mark j as the next for currentIndex in the collision chain
                 hashtable[currentIndex].next = j;
@@ -248,7 +249,7 @@ void del(HashTable hashtable, char* key) {
         if ( hashtable[currentIndex].key == NULL ) break;
         if (!strcmp(key, hashtable[currentIndex].key)) {
             printf("\nDeleting key '%s'\n", key);
-            int kidx = hashtable[currentIndex].keyIndex;
+            int keyIndex = hashtable[currentIndex].keyIndex;
             if (prevIndex!= -1) {
                 hashtable[prevIndex].next = hashtable[currentIndex].next;
             } else {
@@ -277,11 +278,11 @@ void del(HashTable hashtable, char* key) {
             hashtable[currentIndex].key = NULL;
             hashtable[currentIndex].value = NULL;
             hashtable[currentIndex].next = -1;
-            if (kidx!=-1) {
-                free(keys[kidx]);
-                free(values[kidx]);
-                keys[kidx] = NULL;
-                values[kidx]= NULL;
+            if (keyIndex!=-1) {
+                free(keys[keyIndex]);
+                free(values[keyIndex]);
+                keys[keyIndex] = NULL;
+                values[keyIndex]= NULL;
             }
             
             storedElem --;
