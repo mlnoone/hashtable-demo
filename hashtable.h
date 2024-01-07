@@ -16,12 +16,11 @@ typedef Entry* HashTable;
  This must be freed by the calling freeHashtable function when done*/
 void getHashTable(HashTable* htp, int n);
 
-/* Updates the hashtable with newCount entries from newKeys and newValues arrays, local copies of the each string are stored*/
-bool rehash(HashTable* htp, char** newKeys, char** newValues, int newCount);
-
 void printHashTable(HashTable hashtable);
 
 //CRUD operations
+/* Add newCount entries from newKeys and newValues arrays, local copies of the each string are stored, the hashtable will be rehashed if needed*/
+bool add(HashTable* htp, char** newKeys, char** newValues, int newCount);
 bool checkKey(HashTable hashtable, char* key);
 char* getValue(HashTable hashtable, char* key);
 //Note: Stores a local copy of value, after clearing the previous one
