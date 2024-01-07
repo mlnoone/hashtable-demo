@@ -65,7 +65,7 @@ int main() {
         return 1;
     } 
    
-    bool success = rehash(&hashtable, keys, values, nElem);
+    bool success = add(&hashtable, keys, values, nElem);
     
     // Free the keys and values
     for (int i=0; i<nElem; i++) {
@@ -147,7 +147,7 @@ int main() {
                     update(hashtable, key, value);
                } else {
                    
-                   if(!rehash(&hashtable, &key, &value, 1)) {
+                   if(!add(&hashtable, &key, &value, 1)) {
                        return 1;
                    }
                    
