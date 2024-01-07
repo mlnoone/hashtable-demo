@@ -209,7 +209,6 @@ char* getValue(HashTable hashtable, char* key) {
     printf("\n#%d", currentIndex);
     while( currentIndex != -1) {
         printf("->%s", ( hashtable[currentIndex].key == NULL ? "ⓧ" : hashtable[currentIndex].key ) );
-        if ( hashtable[currentIndex].key == NULL ) break;
         if (!strcmp(key, hashtable[currentIndex].key)) {
             printf("\n");
             return hashtable[currentIndex].value;
@@ -224,12 +223,13 @@ void update(HashTable hashtable, char* key, char* value) {
     printf("\n%d", currentIndex);
     while( currentIndex != -1) {
         printf("->%s", ( hashtable[currentIndex].key == NULL ? "ⓧ" : hashtable[currentIndex].key ) );
-        if ( hashtable[currentIndex].key == NULL ) break;
         if (!strcmp(key, hashtable[currentIndex].key)) {
             int i = hashtable[currentIndex].keyIndex;
+            printf("=>%s\n",value);
             //Free current value and insert local copy of new value
             free(values[i]);
             values[i] = strdup(value);
+            
             hashtable[currentIndex].value = values[i];
             return;
         }
@@ -246,7 +246,6 @@ void del(HashTable hashtable, char* key) {
     int prevIndex = -1;
     while( currentIndex != -1) {
         printf("->%s", ( hashtable[currentIndex].key == NULL ? "ⓧ" : hashtable[currentIndex].key ) );
-        if ( hashtable[currentIndex].key == NULL ) break;
         if (!strcmp(key, hashtable[currentIndex].key)) {
             printf("\nDeleting key '%s'\n", key);
             int keyIndex = hashtable[currentIndex].keyIndex;
