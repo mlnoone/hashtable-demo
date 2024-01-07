@@ -88,7 +88,7 @@ static int incNElem(int newCount) {
     return SUCCESS;
 }
   
-bool rehash(HashTable* htp, char** newKeys, char** newValues, int newCount) {
+bool add(HashTable* htp, char** newKeys, char** newValues, int newCount) {
     
     int startElem = nElem;
     if (incNElem(newCount) == FAILED) {
@@ -119,8 +119,8 @@ bool rehash(HashTable* htp, char** newKeys, char** newValues, int newCount) {
     printf("\nBuilding Hash Table:\n");
     HashTable hashtable = *htp;
 
-    bool stored[newCount];
-    int hashes[newCount];
+    bool stored[resized ?  nElem : newCount];
+    int hashes[resized ? nElem : newCount];
     
     if (startElem==0) {
         for (int i=0; i<tableSize; i++) {
@@ -250,41 +250,37 @@ void del(HashTable hashtable, char* key) {
         if (!strcmp(key, hashtable[currentIndex].key)) {
             printf("\nDeleting key '%s'\n", key);
             int keyIndex = hashtable[currentIndex].keyIndex;
-            if (prevIndex!= -1) {
+            int nextIndex = hashtable[currentIndex].next;
+            // If next is not -1, and not a root (this can happen after multiple additions and deletions)
+            // then shift it to the currentIndex
+            bool shiftNext = !(nextIndex == -1 || nextIndex == hashtable[nextIndex].hash);
+            if (shiftNext) {
+                    hashtable[currentIndex].key = hashtable[nextIndex].key;
+                    hashtable[currentIndex].hash = hashtable[nextIndex].hash;
+                    hashtable[currentIndex].keyIndex = hashtable[nextIndex].keyIndex;
+                    hashtable[currentIndex].value = hashtable[nextIndex].value;
+                    hashtable[currentIndex].next = hashtable[nextIndex].next;
+                    currentIndex = nextIndex;
+            }
+            if (!(prevIndex == -1 || shiftNext)) {
+                // if next is not shifted, and previous is not empty,
+                // link next to previous one, as current is going to deleted
+                // otherwise this step is not needed
                 hashtable[prevIndex].next = hashtable[currentIndex].next;
-            } else {
-                int nextIndex = hashtable[currentIndex].next;
-                if (nextIndex != -1) {
-                    
-                    // Don't chain through non matching hashes which may happen
-                    // after multiple deletions and additions
-                    
-                    while(hashtable[nextIndex].hash != hashtable[currentIndex].hash ) {
-                        nextIndex = hashtable[nextIndex].next;
-                        if (nextIndex == -1) break;
-                    }
-                    if (nextIndex != -1) {
-                        hashtable[currentIndex].key = hashtable[nextIndex].key;
-                        hashtable[currentIndex].hash = hashtable[nextIndex].hash;
-                        hashtable[currentIndex].keyIndex = hashtable[nextIndex].keyIndex;
-                        hashtable[currentIndex].value = hashtable[nextIndex].value;
-                        hashtable[currentIndex].next = hashtable[nextIndex].next;
-                        currentIndex = nextIndex;
-                    }
-                }
             }
             hashtable[currentIndex].keyIndex = -1;
             hashtable[currentIndex].hash = -1;
             hashtable[currentIndex].key = NULL;
             hashtable[currentIndex].value = NULL;
             hashtable[currentIndex].next = -1;
-            if (keyIndex!=-1) {
-                free(keys[keyIndex]);
-                free(values[keyIndex]);
-                keys[keyIndex] = NULL;
-                values[keyIndex]= NULL;
-            }
             
+            //Free up memory of the unused keys and values
+            free(keys[keyIndex]);
+            free(values[keyIndex]);
+            keys[keyIndex] = NULL;
+            values[keyIndex]= NULL;
+            
+            //Decrement stored elem
             storedElem --;
             return;
         }
@@ -304,13 +300,14 @@ void printHashTable(HashTable hashtable) {
            bool root = (i == entry.hash);
            bool hasNext = entry.next != -1;
            const char* format = " ->%s[%d]";
-           char next[hasNext ? fl(format,hashtable[entry.next].key, entry.next) : 1];
+           int nextStringLength = hasNext ? fl(format,hashtable[entry.next].key, entry.next) : 1;
+           char nextString[nextStringLength];
            if (hasNext) {
-               sprintf(next,format,hashtable[entry.next].key, entry.next);
+               snprintf(nextString,nextStringLength,format,hashtable[entry.next].key, entry.next);
            } else {
-               strcpy(next,"");
+               strcpy(nextString,"");
            }
-           printf("%d]%s%s=>%s%s\n",i, (root?"":">"), entry.key, entry.value, next);
+           printf("%d]%s%s=>%s%s\n",i, (root?"":">"), entry.key, entry.value, nextString);
            
         }
        else printf("%d]\n",i);
@@ -372,5 +369,3 @@ static int hash(char* str) {
 
         return (int) (hash%tableSize);
 }
-
-
