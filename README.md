@@ -8,9 +8,7 @@ Hash tables combine flexible storage with quick addressing, and handle all of C-
 
 This started as a self learning project to explore the workings of the hashtable.
 
-You can  try it out quickly by pasting the code inside 'hashtable.c' at the Online C Compiler, https://www.onlinegdb.com/online_c_compiler
-
-or it can be compiled and run on Linux, Mac or Windows: `gcc -o hashtable hashtable.c` [with ` -lm` in linux]
+To run the demo, clone or copy the files, 'make' and './demo'
 
 The code is commented to highlight some important paradigms of hash tables.
 
