@@ -208,13 +208,16 @@ char* getValue(HashTable hashtable, char* key) {
     int currentIndex =  hash(key);
     printf("\n#%d", currentIndex);
     while( currentIndex != -1) {
-        printf("->%s", ( hashtable[currentIndex].key == NULL ? "ⓧ" : hashtable[currentIndex].key ) );
-        if (!strcmp(key, hashtable[currentIndex].key)) {
-            printf("\n");
-            return hashtable[currentIndex].value;
+        if ( hashtable[currentIndex].key != NULL ) {
+            printf("->%s", hashtable[currentIndex].key );
+            if (!strcmp(key, hashtable[currentIndex].key)) {
+                printf("\n");
+                return hashtable[currentIndex].value;
+            }
         }
         currentIndex = hashtable[currentIndex].next;
     }
+    printf("->ⓧ");
     return NULL;
 }
 
@@ -222,21 +225,25 @@ void update(HashTable hashtable, char* key, char* value) {
     int currentIndex =  hash(key);
     printf("\n%d", currentIndex);
     while( currentIndex != -1) {
-        printf("->%s", ( hashtable[currentIndex].key == NULL ? "ⓧ" : hashtable[currentIndex].key ) );
-        if (!strcmp(key, hashtable[currentIndex].key)) {
-            int i = hashtable[currentIndex].keyIndex;
-            printf("=>%s\n",value);
-            //Free current value and insert local copy of new value
-            free(values[i]);
-            values[i] = strdup(value);
-            
-            hashtable[currentIndex].value = values[i];
-            return;
+        if ( hashtable[currentIndex].key != NULL ) {
+            printf("->%s", hashtable[currentIndex].key );
+            if (!strcmp(key, hashtable[currentIndex].key)) {
+                int i = hashtable[currentIndex].keyIndex;
+                printf("=>%s\n",value);
+                //Free current value and insert local copy of new value
+                free(values[i]);
+                values[i] = strdup(value);
+                
+                hashtable[currentIndex].value = values[i];
+                return;
+            }
         }
         
         currentIndex = hashtable[currentIndex].next;
+        
     }
-     printf("\nKey: '%s' not found\n", key);
+    printf("->ⓧ");
+    printf("\nKey: '%s' not found\n", key);
 
 }
 
@@ -245,49 +252,52 @@ void del(HashTable hashtable, char* key) {
     printf("\n%d", currentIndex);
     int prevIndex = -1;
     while( currentIndex != -1) {
-        printf("->%s", ( hashtable[currentIndex].key == NULL ? "ⓧ" : hashtable[currentIndex].key ) );
-        if (!strcmp(key, hashtable[currentIndex].key)) {
-            printf("\nDeleting key '%s'\n", key);
-            int keyIndex = hashtable[currentIndex].keyIndex;
-            int nextIndex = hashtable[currentIndex].next;
-            // If next is not -1, and not a root (this can happen after multiple additions and deletions)
-            // then shift it to the currentIndex
-            bool shiftNext = !(nextIndex == -1 || nextIndex == hashtable[nextIndex].hash);
-            if (shiftNext) {
+        if ( hashtable[currentIndex].key != NULL ) {
+            printf("->%s", hashtable[currentIndex].key );
+            if (!strcmp(key, hashtable[currentIndex].key)) {
+                printf("\nDeleting key '%s'\n", key);
+                int keyIndex = hashtable[currentIndex].keyIndex;
+                int nextIndex = hashtable[currentIndex].next;
+                // If next is not -1, and not a root (this can happen after multiple additions and deletions)
+                // then shift it to the currentIndex
+                bool shiftNext = !(nextIndex == -1 || nextIndex == hashtable[nextIndex].hash);
+                if (shiftNext) {
                     hashtable[currentIndex].key = hashtable[nextIndex].key;
                     hashtable[currentIndex].hash = hashtable[nextIndex].hash;
                     hashtable[currentIndex].keyIndex = hashtable[nextIndex].keyIndex;
                     hashtable[currentIndex].value = hashtable[nextIndex].value;
                     hashtable[currentIndex].next = hashtable[nextIndex].next;
                     currentIndex = nextIndex;
+                }
+                if (!(prevIndex == -1 || shiftNext)) {
+                    // if next is not shifted, and previous is not empty,
+                    // link next to previous one, as current is going to deleted
+                    // otherwise this step is not needed
+                    hashtable[prevIndex].next = hashtable[currentIndex].next;
+                }
+                hashtable[currentIndex].keyIndex = -1;
+                hashtable[currentIndex].hash = -1;
+                hashtable[currentIndex].key = NULL;
+                hashtable[currentIndex].value = NULL;
+                hashtable[currentIndex].next = -1;
+                
+                //Free up memory of the unused keys and values
+                free(keys[keyIndex]);
+                free(values[keyIndex]);
+                keys[keyIndex] = NULL;
+                values[keyIndex]= NULL;
+                
+                //Decrement stored elem
+                storedElem --;
+                return;
             }
-            if (!(prevIndex == -1 || shiftNext)) {
-                // if next is not shifted, and previous is not empty,
-                // link next to previous one, as current is going to deleted
-                // otherwise this step is not needed
-                hashtable[prevIndex].next = hashtable[currentIndex].next;
-            }
-            hashtable[currentIndex].keyIndex = -1;
-            hashtable[currentIndex].hash = -1;
-            hashtable[currentIndex].key = NULL;
-            hashtable[currentIndex].value = NULL;
-            hashtable[currentIndex].next = -1;
-            
-            //Free up memory of the unused keys and values
-            free(keys[keyIndex]);
-            free(values[keyIndex]);
-            keys[keyIndex] = NULL;
-            values[keyIndex]= NULL;
-            
-            //Decrement stored elem
-            storedElem --;
-            return;
         }
-        
         prevIndex = currentIndex;
         currentIndex = hashtable[currentIndex].next;
+    
     }
-     printf("\nKey: '%s' not found\n", key);
+    printf("->ⓧ");
+    printf("\nKey: '%s' not found\n", key);
 }
 
 
